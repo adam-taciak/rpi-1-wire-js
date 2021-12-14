@@ -1,0 +1,72 @@
+name: Build
+
+on:
+  push:
+    branches: [main, develop, test]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node:
+          # Does not build on Node 10 so Raspbian Legacy must be updated.
+          - 12 # Until 2022-04-30.
+          - 17 # Until 2022-06-01.
+          - 14 # Until 2023-04-30.
+          - 16 # Until 2024-04-30.
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Use Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Cache node modules
+        uses: actions/cache@v2
+        env:
+          cache-name: cache-node-modules
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+      - name: Install dependencies
+        run: npm i
+
+      - name: Lint, unit test, build and test build
+        run: npm run build
+
+  publish:
+    # Only publish if this is a push to the `main` branch...
+    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+    # ... and the `build` job was successful.
+    needs: build
+
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions/setup-node@v2
+        with:
+          # Use the oldest supported Node version.
+          node-version: 12
+
+      - uses: actions/cache@v2
+        env:
+          cache-name: cache-node-modules
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+      - run: npm run build
+      - uses: JS-DevTools/npm-publish@v1
+        with:
+          token: ${{ secrets.NPM_TOKEN }}
