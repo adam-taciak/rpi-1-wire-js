@@ -1,6 +1,6 @@
 {
   "name": "rpi-1-wire",
-  "version": "0.1.0",
+  "version": "0.2.0-dev",
   "description": "One-wire sensors for the Raspberry Pi and similar devices running Node JS.",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
